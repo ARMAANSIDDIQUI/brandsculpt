@@ -25,7 +25,7 @@ export default function AdminUploadPage() {
 
   const fetchImages = async () => {
     try {
-      const res = await fetch("/api/upload");
+      const res = await fetch("/api/images");
       const data = await res.json();
       if (data.success) {
         setImages(data.data);
