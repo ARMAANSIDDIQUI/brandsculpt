@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { getApiUrl } from '@/lib/api';
 
 const INDUSTRIES = [
   { name: 'F&B', emoji: '🍴' },
@@ -29,7 +30,8 @@ export default function IndustriesAndBrands() {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const res = await fetch('/api/images?category=brands');
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/api/images?category=brands`);
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           // If we have less than 10 brands, duplicate them to ensure smooth marquee

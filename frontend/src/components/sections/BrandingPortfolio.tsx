@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { getApiUrl } from '@/lib/api';
 
 const BrandingPortfolio = () => {
   const [images, setImages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const categories = ['logos', 'graphic-design', 'packaging', 'menu-designing'];
+    const apiUrl = getApiUrl();
     
     categories.forEach(async (cat) => {
       try {
-        const res = await fetch(`/api/images?category=${cat}`);
+        const res = await fetch(`${apiUrl}/api/images?category=${cat}`);
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           // Use the most recent image for this category

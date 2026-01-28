@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { getApiUrl } from "@/lib/api";
 
 interface UploadedImage {
   _id: string;
@@ -38,9 +39,10 @@ export default function AdminDashboard() {
   const fetchImages = async () => {
     setLoading(true);
     try {
+      const apiUrl = getApiUrl();
       const url = filter 
-        ? `/api/images?category=${filter}` 
-        : "/api/images";
+        ? `${apiUrl}/api/images?category=${filter}` 
+        : `${apiUrl}/api/images`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -58,8 +60,9 @@ export default function AdminDashboard() {
 
     setDeleting(id);
     try {
+      const apiUrl = getApiUrl();
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/images/${id}`, {
+      const res = await fetch(`${apiUrl}/api/images/${id}`, {
         method: "DELETE",
         headers: {
             "Authorization": `Bearer ${token}`

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getApiUrl } from "@/lib/api";
 
 interface UploadedImage {
   _id: string;
@@ -24,7 +25,8 @@ export default function AdminUploadPage() {
 
   const fetchImages = async () => {
     try {
-      const res = await fetch("/api/images");
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/api/images`);
       const data = await res.json();
       if (data.success) {
         setImages(data.data);
@@ -56,8 +58,9 @@ export default function AdminUploadPage() {
     formData.append("category", category);
 
     try {
+      const apiUrl = getApiUrl();
       const token = localStorage.getItem("token");
-      const response = await fetch("/api/upload", {
+      const response = await fetch(`${apiUrl}/api/upload`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`

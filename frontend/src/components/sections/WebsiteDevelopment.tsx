@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { getApiUrl } from '@/lib/api';
 
 const WebsiteDevelopment = () => {
   const [image, setImage] = useState<string | null>(null);
@@ -9,7 +10,8 @@ const WebsiteDevelopment = () => {
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const res = await fetch('/api/images?category=website-development');
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/api/images?category=website-development`);
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setImage(data.data[0].url);

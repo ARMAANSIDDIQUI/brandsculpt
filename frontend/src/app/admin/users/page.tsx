@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getApiUrl } from "@/lib/api";
 
 export default function ManageUsersPage() {
   const [email, setEmail] = useState("");
@@ -16,8 +17,9 @@ export default function ManageUsersPage() {
     setIsError(false);
 
     try {
+      const apiUrl = getApiUrl();
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/auth/create-admin", {
+      const res = await fetch(`${apiUrl}/api/auth/create-admin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

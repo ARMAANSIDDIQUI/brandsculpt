@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Navigation from "@/components/sections/Navigation";
 import Footer from "@/components/sections/Footer";
+import { getApiUrl } from "@/lib/api";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -27,7 +28,8 @@ export default function ContactPage() {
     setResponseMsg("");
 
     try {
-      const res = await fetch("/api/contact", {
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

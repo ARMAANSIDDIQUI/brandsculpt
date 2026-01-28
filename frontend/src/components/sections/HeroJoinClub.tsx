@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { getApiUrl } from '@/lib/api';
 
 /**
  * HeroJoinClub Section
@@ -22,7 +23,8 @@ const HeroJoinClub: React.FC = () => {
     const fetchHeroImage = async () => {
       try {
         // Fetching from 'team' category as it fits the content description
-        const res = await fetch('/api/images?category=team');
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/api/images?category=team`);
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setHeroImage(data.data[0].url);

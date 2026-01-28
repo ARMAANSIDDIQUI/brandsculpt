@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getApiUrl } from "@/lib/api";
 
 export default function ProfilePage() {
   const [email, setEmail] = useState("");
@@ -32,8 +33,9 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
+      const apiUrl = getApiUrl();
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/auth/profile", {
+      const res = await fetch(`${apiUrl}/api/auth/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
