@@ -1,4 +1,6 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 /**
@@ -11,21 +13,26 @@ import Image from 'next/image';
  */
 
 const HeroJoinClub: React.FC = () => {
-  // Assets provided in the prompt
-  const galleryImages = [
-    {
-      src: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/website_2Fjointheclub_00001-1.jpg",
-      alt: "Pinksky Club Influencers Group 1"
-    },
-    {
-      src: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/website_2Fjointheclub_00002-2.jpg",
-      alt: "Pinksky Club Influencers Group 2"
-    },
-    {
-      src: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/website_2Fjointheclub_00003-3.jpg",
-      alt: "Pinksky Club Influencers Group 3"
-    }
-  ];
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+
+  // Assets provided in the prompt (Fallback)
+  const defaultImage = "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/website_2Fjointheclub_00002-2.jpg";
+
+  useEffect(() => {
+    const fetchHeroImage = async () => {
+      try {
+        // Fetching from 'team' category as it fits the content description
+        const res = await fetch('/api/images?category=team');
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          setHeroImage(data.data[0].url);
+        }
+      } catch (error) {
+        console.error("Error fetching hero image:", error);
+      }
+    };
+    fetchHeroImage();
+  }, []);
 
   return (
     <section className="bg-white-coffee pt-24 lg:pt-32 overflow-hidden">
@@ -79,8 +86,8 @@ const HeroJoinClub: React.FC = () => {
                   to match the visual weight of the screenshot's composition. */}
               <div className="relative w-full h-full">
                 <Image
-                  src={galleryImages[1].src} // Using the centered "active" image from screenshots
-                  alt={galleryImages[1].alt}
+                  src={heroImage || defaultImage} 
+                  alt="Brandsculpt Influencers"
                   fill
                   className="object-cover object-center"
                   priority

@@ -4,20 +4,47 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
+import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import Image from './models/Image.js';
+import User from './models/User.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_change_this_in_production';
+
+// Email Transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
+// Database Connection & Seed Initial User
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB Connected'))
+  .then(async () => {
+    console.log('MongoDB Connected');
+    
+    // Seed Initial Admin
+    const email = 'armaansiddiqui.pms@gmail.com';
+    const exists = await User.findOne({ email });
+    if (!exists) {
+      const user = new User({
+        email,
+        password: '12345' // Will be hashed by pre-save hook
+      });
+      await user.save();
+      console.log('Initial admin user created: ' + email);
+    }
+  })
   .catch(err => console.log(err));
 
 // Cloudinary Config
@@ -31,23 +58,96 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Routes
+// --- Auth Middleware ---
+const protect = async (req, res, next) => {
+  let token;
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+      next();
+    } catch (error) {
+      console.error(error);
+      res.status(401).json({ success: false, error: 'Not authorized, token failed' });
+    }
+  }
+
+  if (!token) {
+    res.status(401).json({ success: false, error: 'Not authorized, no token' });
+  }
+};
+
+// --- Routes ---
+
 app.get('/', (req, res) => {
   res.send('Brandsculpt Backend Running');
 });
 
-// Get All Images
+// --- Auth Routes ---
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        success: true,
+        token: jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' }),
+        user: {
+          id: user._id,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } else {
+      res.status(401).json({ success: false, error: 'Invalid email or password' });
+    }
+  } catch (error) {
+     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create Admin (Protected)
+app.post('/api/auth/create-admin', protect, async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, error: 'User already exists' });
+    }
+
+    const user = new User({ email, password });
+    await user.save();
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Admin created successfully',
+      user: { id: user._id, email: user.email }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// --- Image Routes ---
+
+// Get All Images (with optional category filter)
 app.get('/api/images', async (req, res) => {
   try {
-    const images = await Image.find().sort({ createdAt: -1 });
+    const { category } = req.query;
+    const query = category ? { category } : {};
+    const images = await Image.find(query).sort({ createdAt: -1 });
     res.json({ success: true, data: images });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Upload Image
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+// Upload Image (Protected)
+app.post('/api/upload', protect, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
@@ -75,6 +175,71 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: 'Upload failed' });
+  }
+});
+
+// Delete Image (Protected)
+app.delete('/api/images/:id', protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const image = await Image.findById(id);
+
+    if (!image) {
+      return res.status(404).json({ success: false, error: 'Image not found' });
+    }
+
+    // Optional: Delete from Cloudinary if needed
+    if (image.publicId) {
+        await cloudinary.uploader.destroy(image.publicId);
+    }
+
+    await Image.findByIdAndDelete(id);
+
+    res.json({ success: true, message: 'Image deleted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Delete failed' });
+  }
+});
+
+// Contact Form Route
+app.post('/api/contact', async (req, res) => {
+  const { name, email, phone, subject, message } = req.body;
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ success: false, error: 'Please provide name, email, and message.' });
+  }
+
+  const mailOptions = {
+    from: process.env.GMAIL_USER,
+    to: process.env.GMAIL_USER, // Send to yourself
+    replyTo: email,
+    subject: `Brandsculpt Contact: ${subject || 'New Message'}`,
+    text: `
+      Name: ${name}
+      Email: ${email}
+      Phone: ${phone || 'N/A'}
+      
+      Message:
+      ${message}
+    `,
+    html: `
+      <h3>New Contact Form Submission</h3>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+      <br>
+      <p><strong>Message:</strong></p>
+      <p>${message.replace(/\n/g, '<br>')}</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: 'Email sent successfully' });
+  } catch (error) {
+    console.error('Email Error:', error);
+    res.status(500).json({ success: false, error: 'Failed to send email' });
   }
 });
 

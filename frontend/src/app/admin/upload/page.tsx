@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Navigation from "@/components/sections/Navigation";
 
 interface UploadedImage {
   _id: string;
@@ -57,8 +56,12 @@ export default function AdminUploadPage() {
     formData.append("category", category);
 
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch("/api/upload", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -81,15 +84,15 @@ export default function AdminUploadPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <Navigation />
-      <div className="pt-32 px-4 max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12">
+    <main className="p-8 bg-gray-50/50 min-h-screen">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2">Upload Image</h1>
+        <p className="text-gray-500 mb-8">Add new images to your gallery or website sections.</p>
+        
+        <div className="grid lg:grid-cols-2 gap-8">
             {/* Upload Form */}
             <div>
-                <h1 className="text-3xl font-bold mb-8">Admin Image Upload</h1>
-                
-                <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+                <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Image File</label>
                     <input
@@ -124,6 +127,12 @@ export default function AdminUploadPage() {
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none"
                     >
                     <option value="general">General</option>
+                    <option value="logos">Logo</option>
+                    <option value="graphic-design">Graphic Design</option>
+                    <option value="packaging">Packaging</option>
+                    <option value="menu-designing">Menu Designing</option>
+                    <option value="brand-identity">Brand Identity</option>
+                    <option value="website-development">Website Development</option>
                     <option value="portfolio">Portfolio</option>
                     <option value="brands">Brands</option>
                     <option value="team">Team</option>

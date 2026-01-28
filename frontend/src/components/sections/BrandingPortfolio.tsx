@@ -1,29 +1,54 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 const BrandingPortfolio = () => {
+  const [images, setImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const categories = ['logos', 'graphic-design', 'packaging', 'menu-designing'];
+    
+    categories.forEach(async (cat) => {
+      try {
+        const res = await fetch(`/api/images?category=${cat}`);
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          // Use the most recent image for this category
+          setImages(prev => ({ ...prev, [cat]: data.data[0].url }));
+        }
+      } catch (error) {
+        console.error(`Error fetching image for ${cat}:`, error);
+      }
+    });
+  }, []);
+
   const portfolioItems = [
     {
       title: 'Graphic Design',
-      image: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_4.png',
+      category: 'graphic-design',
+      defaultImage: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_4.png',
       link: '#',
       alt: 'graphic-design'
     },
     {
       title: 'Logo',
-      image: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_5.png',
+      category: 'logos',
+      defaultImage: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_5.png',
       link: '#',
       alt: 'logo'
     },
     {
       title: 'Packaging',
-      image: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_6.png',
+      category: 'packaging',
+      defaultImage: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_6.png',
       link: '#',
       alt: 'packaging'
     },
     {
       title: 'Menu Designing',
-      image: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_7.png',
+      category: 'menu-designing',
+      defaultImage: 'https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/ab413a4a-cecc-46f7-98e6-fb2b31d2f04d-pinkskyclub-com/assets/images/images_7.png',
       link: '#',
       alt: 'menu-designing'
     }
@@ -48,7 +73,7 @@ const BrandingPortfolio = () => {
               <div className="relative w-full h-[210px] lg:h-[400px]">
                 <Image
                   alt={item.alt}
-                  src={item.image}
+                  src={images[item.category] || item.defaultImage}
                   fill
                   className="object-cover object-center"
                   sizes="(max-width: 768px) 150px, 280px"
