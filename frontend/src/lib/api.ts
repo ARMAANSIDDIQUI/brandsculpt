@@ -1,13 +1,10 @@
 export const getApiUrl = () => {
-  // In production, we want to hit the backend directly or via proxy
-  // If API_URL is set in environment (NEXT_PUBLIC_API_URL), use it.
-  // Otherwise fallback to localhost for dev.
-  
-  const productionUrl = process.env.NEXT_PUBLIC_API_URL;
-  
-  if (process.env.NODE_ENV === 'production' && productionUrl) {
-      return productionUrl;
+  // Use API_URL from environment (NEXT_PUBLIC_API_URL)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error('NEXT_PUBLIC_API_URL environment variable is not set');
   }
-  
-  return 'http://localhost:5000';
+
+  return apiUrl;
 };

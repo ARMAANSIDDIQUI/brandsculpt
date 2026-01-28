@@ -24,12 +24,14 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
+    const apiUrl = process.env.API_URL;
+    if (!apiUrl) {
+      throw new Error('API_URL environment variable is not set');
+    }
     return [
       {
         source: '/api/:path*',
-        destination: process.env.API_URL 
-          ? `${process.env.API_URL}/api/:path*` 
-          : 'http://localhost:5000/api/:path*',
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },
