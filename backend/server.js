@@ -212,7 +212,7 @@ app.post('/api/contact', async (req, res) => {
 
   const mailOptions = {
     from: process.env.GMAIL_USER,
-    to: process.env.GMAIL_USER, // Send to yourself
+    to: 'akhtarhannaan@gmail.com, armaansiddiqui.pms@gmail.com, replace_this_with_third_email@example.com', // Send to multiple recipients
     replyTo: email,
     subject: `Brandsculpt Contact: ${subject || 'New Message'}`,
     text: `
