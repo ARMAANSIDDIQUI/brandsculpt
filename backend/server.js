@@ -28,8 +28,12 @@ const transporter = nodemailer.createTransport({
 app.use(cors());
 app.use(express.json());
 
+console.log('Attempting to connect to MongoDB...');
+
 // Database Connection & Seed Initial Users
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000 // Fail faster if no connection
+})
   .then(async () => {
     console.log('MongoDB Connected');
     
@@ -39,25 +43,35 @@ mongoose.connect(process.env.MONGODB_URI)
       'akhtarhannaan@gmail.com'
     ];
 
-    for (const email of initialAdmins) {
-      const user = await User.findOne({ email });
-      if (!user) {
-        const newUser = new User({
-          email,
-          password: '12345' // Will be hashed by pre-save hook
-        });
-        await newUser.save();
-        console.log('Initial admin user created: ' + email);
-      } else {
-        // Optional: Reset password to ensure access if needed (uncomment if desired, or keep as is to preserve user changes)
-        // For this request, we will ensure they are set to 12345 to "correct" them.
-        user.password = '12345';
-        await user.save();
-        console.log('Initial admin user password reset to default: ' + email);
+    try {
+      for (const email of initialAdmins) {
+        const user = await User.findOne({ email });
+        if (!user) {
+          const newUser = new User({
+            email,
+            password: '12345' // Will be hashed by pre-save hook
+          });
+          await newUser.save();
+          console.log('Initial admin user created: ' + email);
+        } else {
+          user.password = '12345';
+          await user.save();
+          console.log('Initial admin user password reset to default: ' + email);
+        }
       }
+    } catch (seedError) {
+      console.error("Error seeding admins:", seedError);
     }
+
+    // Start server ONLY after DB is connected
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   })
-  .catch(err => console.log(err));
+  .catch(err => {
+    console.error('MongoDB Connection Error:', err);
+    process.exit(1); // Exit if DB connection fails
+  });
 
 // Cloudinary Config
 cloudinary.config({
@@ -117,6 +131,7 @@ app.post('/api/auth/login', async (req, res) => {
       res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
   } catch (error) {
+     console.error("Login Error:", error);
      res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -251,7 +266,7 @@ app.post('/api/contact', async (req, res) => {
     from: process.env.GMAIL_USER,
     to: 'akhtarhannaan@gmail.com, armaansiddiqui.pms@gmail.com, replace_this_with_third_email@example.com', // Send to multiple recipients
     replyTo: email,
-    subject: `Brandsculpt Contact: ${subject || 'New Message'}`,
+    subject: `Brandsculpt Contact: ${subject || 'New Message'}`, 
     text: `
       Name: ${name}
       Email: ${email}
@@ -280,8 +295,6 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Removed isolated app.listen; it's now inside the connect().then() block
 
 export default app;
