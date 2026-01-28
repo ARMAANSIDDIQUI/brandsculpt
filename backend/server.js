@@ -28,21 +28,27 @@ const transporter = nodemailer.createTransport({
 app.use(cors());
 app.use(express.json());
 
-// Database Connection & Seed Initial User
+// Database Connection & Seed Initial Users
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('MongoDB Connected');
     
-    // Seed Initial Admin
-    const email = 'armaansiddiqui.pms@gmail.com';
-    const exists = await User.findOne({ email });
-    if (!exists) {
-      const user = new User({
-        email,
-        password: '12345' // Will be hashed by pre-save hook
-      });
-      await user.save();
-      console.log('Initial admin user created: ' + email);
+    // Seed Initial Admins
+    const initialAdmins = [
+      'armaansiddiqui.pms@gmail.com',
+      'akhtarhannaan@gmail.com'
+    ];
+
+    for (const email of initialAdmins) {
+      const exists = await User.findOne({ email });
+      if (!exists) {
+        const user = new User({
+          email,
+          password: '12345' // Will be hashed by pre-save hook
+        });
+        await user.save();
+        console.log('Initial admin user created: ' + email);
+      }
     }
   })
   .catch(err => console.log(err));
@@ -109,6 +115,31 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Update Profile (Password)
+app.put('/api/auth/profile', protect, async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.email = req.body.email || user.email;
+    if (req.body.password) {
+      user.password = req.body.password;
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      success: true,
+      user: {
+        id: updatedUser._id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+    });
+  } else {
+    res.status(404).json({ success: false, error: 'User not found' });
+  }
+});
+
 // Create Admin (Protected)
 app.post('/api/auth/create-admin', protect, async (req, res) => {
   const { email, password } = req.body;
@@ -121,7 +152,7 @@ app.post('/api/auth/create-admin', protect, async (req, res) => {
     const user = new User({ email, password });
     await user.save();
 
-    res.status(201).json({ 
+    res.status(201).json({
       success: true, 
       message: 'Admin created successfully',
       user: { id: user._id, email: user.email }

@@ -39,6 +39,7 @@ export default function AdminLayout({
     { name: "Dashboard", href: "/admin" },
     { name: "Upload Image", href: "/admin/upload" },
     { name: "Manage Admins", href: "/admin/users" },
+    { name: "My Profile", href: "/admin/profile" },
   ];
 
   const handleLogout = () => {
