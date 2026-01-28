@@ -105,7 +105,24 @@ const protect = async (req, res, next) => {
 // --- Routes ---
 
 app.get('/', (req, res) => {
-  res.send('Brandsculpt Backend Running');
+  res.json({
+    message: 'Brandsculpt Backend Running',
+    dbStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    dbStateCode: mongoose.connection.readyState
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    dbState: mongoose.connection.readyState, // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
+    dbName: mongoose.connection.name,
+    env: {
+      mongoUriConfigured: !!process.env.MONGODB_URI,
+      cloudinaryConfigured: !!process.env.CLOUDINARY_CLOUD_NAME
+    }
+  });
 });
 
 // --- Auth Routes ---
