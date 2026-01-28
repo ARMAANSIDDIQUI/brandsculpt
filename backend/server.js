@@ -40,14 +40,20 @@ mongoose.connect(process.env.MONGODB_URI)
     ];
 
     for (const email of initialAdmins) {
-      const exists = await User.findOne({ email });
-      if (!exists) {
-        const user = new User({
+      const user = await User.findOne({ email });
+      if (!user) {
+        const newUser = new User({
           email,
           password: '12345' // Will be hashed by pre-save hook
         });
-        await user.save();
+        await newUser.save();
         console.log('Initial admin user created: ' + email);
+      } else {
+        // Optional: Reset password to ensure access if needed (uncomment if desired, or keep as is to preserve user changes)
+        // For this request, we will ensure they are set to 12345 to "correct" them.
+        user.password = '12345';
+        await user.save();
+        console.log('Initial admin user password reset to default: ' + email);
       }
     }
   })
