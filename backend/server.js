@@ -24,58 +24,51 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Middleware
+// Middleware - CORS must be first to handle preflight checks
 app.use(cors({
   origin: ['https://brandsculpt.vercel.app', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 
-console.log('Attempting to connect to MongoDB...');
+console.log('Server initializing...');
 
-// Database Connection & Seed Initial Users
+// Database Connection
+// We do NOT block the app startup on DB connection. Mongoose buffers requests.
 mongoose.connect(process.env.MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000 // Fail faster if no connection
+  serverSelectionTimeoutMS: 5000
 })
   .then(async () => {
     console.log('MongoDB Connected');
     
     // Seed Initial Admins
-    const initialAdmins = [
-      'armaansiddiqui.pms@gmail.com',
-      'akhtarhannaan@gmail.com'
-    ];
-
     try {
+      const initialAdmins = [
+        'armaansiddiqui.pms@gmail.com',
+        'akhtarhannaan@gmail.com'
+      ];
       for (const email of initialAdmins) {
         const user = await User.findOne({ email });
         if (!user) {
-          const newUser = new User({
-            email,
-            password: '12345' // Will be hashed by pre-save hook
-          });
+          const newUser = new User({ email, password: '12345' });
           await newUser.save();
           console.log('Initial admin user created: ' + email);
         } else {
           user.password = '12345';
           await user.save();
-          console.log('Initial admin user password reset to default: ' + email);
+          console.log('Initial admin user password reset: ' + email);
         }
       }
     } catch (seedError) {
       console.error("Error seeding admins:", seedError);
     }
-
-    // Start server ONLY after DB is connected
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
   })
   .catch(err => {
+    // Log error but DO NOT exit process. This allows the app to respond with 500 instead of crashing silently.
     console.error('MongoDB Connection Error:', err);
-    process.exit(1); // Exit if DB connection fails
   });
 
 // Cloudinary Config
@@ -121,6 +114,7 @@ app.get('/', (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   try {
+    // Mongoose will throw here if not connected
     const user = await User.findOne({ email });
     if (user && (await user.matchPassword(password))) {
       res.json({
@@ -137,7 +131,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
   } catch (error) {
      console.error("Login Error:", error);
-     res.status(500).json({ success: false, error: error.message });
+     res.status(500).json({ success: false, error: error.message || "Server Error" });
   }
 });
 
@@ -271,7 +265,7 @@ app.post('/api/contact', async (req, res) => {
     from: process.env.GMAIL_USER,
     to: 'akhtarhannaan@gmail.com, armaansiddiqui.pms@gmail.com, replace_this_with_third_email@example.com', // Send to multiple recipients
     replyTo: email,
-    subject: `Brandsculpt Contact: ${subject || 'New Message'}`, 
+    subject: `Brandsculpt Contact: ${subject || 'New Message'}`,
     text: `
       Name: ${name}
       Email: ${email}
@@ -300,6 +294,9 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Removed isolated app.listen; it's now inside the connect().then() block
+// Start server independent of DB connection status
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 export default app;
