@@ -15,6 +15,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_change_this_in_production';
 
+if (!process.env.MONGODB_URI) {
+  console.error("CRITICAL ERROR: MONGODB_URI environment variable is missing!");
+}
+
 // Email Transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -36,40 +40,31 @@ app.use(express.json());
 
 console.log('Server initializing...');
 
-// Database Connection
-// We do NOT block the app startup on DB connection. Mongoose buffers requests.
-mongoose.connect(process.env.MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000
-})
-  .then(async () => {
-    console.log('MongoDB Connected');
+// Database Connection Strategy
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000
+    });
     
-    // Seed Initial Admins
-    try {
-      const initialAdmins = [
-        'armaansiddiqui.pms@gmail.com',
-        'akhtarhannaan@gmail.com'
-      ];
-      for (const email of initialAdmins) {
-        const user = await User.findOne({ email });
-        if (!user) {
-          const newUser = new User({ email, password: '12345' });
-          await newUser.save();
-          console.log('Initial admin user created: ' + email);
-        } else {
-          user.password = '12345';
-          await user.save();
-          console.log('Initial admin user password reset: ' + email);
-        }
-      }
-    } catch (seedError) {
-      console.error("Error seeding admins:", seedError);
-    }
-  })
-  .catch(err => {
-    // Log error but DO NOT exit process. This allows the app to respond with 500 instead of crashing silently.
-    console.error('MongoDB Connection Error:', err);
-  });
+    isConnected = true;
+    console.log('MongoDB Connected');
+  } catch (error) {
+    console.error('MongoDB Connection Error:', error);
+  }
+};
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Cloudinary Config
 cloudinary.config({
@@ -130,6 +125,7 @@ app.get('/api/health', (req, res) => {
 // Login
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
+
   try {
     // Mongoose will throw here if not connected
     const user = await User.findOne({ email });
@@ -280,7 +276,7 @@ app.post('/api/contact', async (req, res) => {
 
   const mailOptions = {
     from: process.env.GMAIL_USER,
-    to: 'akhtarhannaan@gmail.com, armaansiddiqui.pms@gmail.com, replace_this_with_third_email@example.com', // Send to multiple recipients
+    to: 'akhtarhannaan@gmail.com, armaansiddiqui.pms@gmail.com, connect.brandsculpt@gmail.com ', // Send to multiple recipients
     replyTo: email,
     subject: `Brandsculpt Contact: ${subject || 'New Message'}`,
     text: `
