@@ -41,29 +41,41 @@ app.use(express.json());
 console.log('Server initializing...');
 
 // Database Connection Strategy
-let isConnected = false;
+let connectionPromise = null;
 
 const connectDB = async () => {
-  if (isConnected || mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState === 1) {
     return;
   }
 
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000
-    });
-    
-    isConnected = true;
-    console.log('MongoDB Connected');
-  } catch (error) {
-    console.error('MongoDB Connection Error:', error);
+  if (connectionPromise) {
+    return connectionPromise;
   }
+
+  connectionPromise = mongoose.connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000
+  })
+  .then(() => {
+    console.log('MongoDB Connected');
+    connectionPromise = null; // Reset promise on success
+  })
+  .catch((err) => {
+    console.error('MongoDB Connection Error:', err);
+    connectionPromise = null; // Reset promise on failure so we can try again
+    throw err;
+  });
+
+  return connectionPromise;
 };
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Database connection failed' });
+  }
 });
 
 // Cloudinary Config
